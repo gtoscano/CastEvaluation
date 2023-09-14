@@ -1,0 +1,196 @@
+//
+// Created by gtoscano on 3/31/23.
+//
+
+#include "land_scenario.h"
+#include "animal_scenario.h"
+#include "data_reader.h"
+#include "amqp.h"
+#include "misc_utilities.h"
+#include "report_loads.h"
+
+#include <boost/program_options.hpp>
+#include <iostream>
+#include <crossguid/guid.hpp>
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include <gtest/gtest.h>
+#include <fmt/core.h>
+#include <filesystem>
+#include <iostream>
+namespace po = boost::program_options;
+namespace fs = std::filesystem;
+
+void mkdir(std::string dirPath) {
+
+    if (!fs::exists(dirPath)) {
+        if (fs::create_directory(dirPath)) {
+            std::cout << "Directory created successfully." << std::endl;
+        } else {
+            std::cerr << "Failed to create directory." << std::endl;
+        }
+    } else {
+        std::cout << "Directory already exists. Doing nothing." << std::endl;
+    }
+}
+
+void my_test(std::string land_filename, std::string animal_filename) {
+    double total_cost = 0.0;
+
+    std::string emo_uuid = xg::newGuid().str();
+    std::string emo_path = fmt::format("/opt/opt4cast/output/nsga3/{}/", emo_uuid);
+    mkdir(emo_path);
+    std::string exec_uuid = xg::newGuid().str();
+    //exec_uuid = "ceeff93d-724f-4431-bc5d-c564ff3af250";
+    fmt::print("emo_uuid: {}\nexec_uuid: {}\n", emo_uuid, exec_uuid);
+
+    std::string filename = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Berkeley/base/reportloads_wWKTZpn.csv";
+    filename = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Jefferson/base/reportloads_kjVfBNe.csv";
+    ReportLoads base_scenario;
+    base_scenario.load(filename);
+    //auto scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Berkeley/executions/0/results/first/test";
+    //auto scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-4-10/Berkeley/executions/2/results/";
+    auto exec_id = "0";
+    DataReader data_reader;
+    data_reader.read_all();
+    //auto scen_filename = fmt::format("{}/{}_output_t.csv", scenario_path, exec_id);
+    bool land_bool = false;
+    bool animal_bool = false;
+    if (fs::exists(land_filename)) {
+        LandScenario cf(data_reader);
+        cf.load_land_scenario(land_filename);
+        auto scen = cf.get_land_scenario();
+        auto par_filename = fmt::format("{}/{}_impbmpsubmittedland.parquet", emo_path, exec_uuid);
+        cf.write_land(scen, par_filename);
+        auto cost_profile_id = 8;
+        auto total = cf.compute_cost(cost_profile_id);
+        total_cost += total;
+
+        fmt::print("Total Land Cost: {}\n", total);
+        land_bool = true;
+    }
+
+    if (fs::exists(animal_filename)) {
+        AnimalScenario animal(data_reader);
+        animal.load_scenario(animal_filename);
+        auto animal_scen = animal.get_scenario();
+        //auto source = fmt::format("impbmpsubmittedanimal.parquet", emo_path, exec_uuid);
+        auto destination = fmt::format("{}/{}_impbmpsubmittedanimal.parquet", emo_path, exec_uuid);
+        animal.write(animal_scen, destination);
+        auto cost_profile_id = 8;
+        auto total = animal.compute_cost(cost_profile_id);
+        total_cost += total;
+        fmt::print("Total Animal Cost: {}\n", total);
+        animal_bool = true;
+        //misc_utilities::copy_file(source, destination);
+    }
+    fmt::print("Grand Total Cost: {}\n", total_cost);
+
+    if (land_bool ==false && animal_bool == false ) {
+        fmt::print("No land or animal files\nNo data will be process. Exiting now....\n");
+        return;
+    }
+
+
+    //std::string emo_data = "empty_38_6611_256_6_8_59_1_6608_36_2_31_8_410";
+    //36 = No Action
+    //158 = 2019
+    //137 = WIP 3
+    int atm_dep_data_set = 38;
+    int back_out_scenario = 6611;
+    int base_condition = 256;
+    int base_load = 6;
+    int cost_profile = 8;
+    int climate_change_data_set = 59;
+    int historical_crop_need_scenario = 6608;
+    int point_source_data_set = 158; //it was 36 for all our previous executions; //158 = 2019
+    int scenario_type = 2;
+    int soil_p_data_set = 31;
+    int n_counties = 1;
+    int source_data_revision = 8;
+    std::string counties = "410";
+
+    std::string emo_str = fmt::format("empty_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}",
+          atm_dep_data_set,
+          back_out_scenario,
+          base_condition,
+          base_load,
+          cost_profile,
+          climate_change_data_set,
+          n_counties,
+          historical_crop_need_scenario,
+          point_source_data_set,
+          scenario_type,
+          soil_p_data_set,
+          source_data_revision,
+          counties
+          );
+    //                       0     1   2   3  4 5 6  7  8    9  10 11 12 13
+    std::cout<<"emo_str: "<<emo_str<<std::endl;
+    std::string emo_data = "empty_38_6611_256_6_8_59_1_6608_158_2_31_8_410";
+    std::cout<<"emo_data: "<<emo_data<<std::endl;
+    //point source dataset 158
+
+    //emo_uuid = "b3795dee-e704-4268-ad5e-531c9f911e3f";
+
+    RabbitMQClient rabbit(emo_str, emo_uuid);
+
+    rabbit.send_signal(exec_uuid);
+
+    auto output_str = rabbit.wait_for_data();
+    std::vector<std::string> loads;
+    misc_utilities::split_str(output_str, '_', loads);
+    fmt::print("N: {}, P: {}, S: {}\n",loads[0], loads[1], loads[2]);
+
+    ReportLoads base_scenario2;
+    filename = fmt::format("{}/{}_reportloads.csv", emo_path, exec_uuid);
+    base_scenario2.load(filename);
+    fmt::print("Original Loads: \n");
+    base_scenario.print_loads();
+    fmt::print("New Loads: \n");
+    base_scenario2.print_loads();
+}
+
+int main(int argc, char* argv[]) {
+    std::string land_filename = "";
+    std::string animal_filename = "";
+    po::options_description desc("Allowed options");
+    desc.add_options()
+        ("help,h", "produce help message")
+        ("land,l", po::value<std::string>(), "land scenario file")
+        ("animal,a", po::value<std::string>(), "animal scenario file")
+    ;
+
+    po::variables_map vm;
+    try {
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
+    } catch(const po::error &ex) {
+        std::cerr << "Error: " << ex.what() << "\n";
+        std::cerr << "For help, use the --help or -h option.\n";
+        return 1;
+    }
+
+    if (vm.count("help")) {
+        std::cout << desc << "\n";
+        return 1;
+    }
+
+    if (vm.count("land")) {
+        std::cout << "Land scenario file was set to " << vm["land"].as<std::string>() << ".\n";
+        land_filename = vm["land"].as<std::string>();
+    } else {
+        std::cout << "Land scenario file was not set.\n";
+    }
+
+    if (vm.count("animal")) {
+        std::cout << "Animal scenario file was set to " << vm["animal"].as<std::string>() << ".\n";
+        animal_filename = vm["animal"].as<std::string>();
+    } else {
+        std::cout << "Animal scenario file was not set.\n";
+    }
+
+    my_test(land_filename, animal_filename);
+    return 0;
+}
