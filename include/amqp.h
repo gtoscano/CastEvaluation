@@ -20,6 +20,7 @@ public:
     bool send_message(std::string routing_name, std::string msg);
     void send_signal(std::string exec_uuid);
     std::string wait_for_data();
+    std::vector<std::string> wait_for_all_data();
     int transfers_remaining();
     bool is_init();
 

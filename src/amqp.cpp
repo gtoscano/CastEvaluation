@@ -81,7 +81,7 @@ void RabbitMQClient::send_signal(std::string exec_uuid) {
         sent_list_[exec_uuid] = scenario_id;
     }
     catch (const std::exception &error) {
-        std::cerr << "Error en evaluate parallel " << error.what() << std::endl;
+        std::cerr << "Error in evaluate parallel " << error.what() << std::endl;
     }
 }
 
@@ -111,6 +111,37 @@ std::string RabbitMQClient::wait_for_data() {
 
 
     return exec_results_str;
+}
+std::vector<std::string> RabbitMQClient::wait_for_all_data() {
+    std::vector<std::string> exec_results_str_all;
+    auto channel = AmqpClient::Channel::Open(opts_);
+    channel->DeclareExchange(EXCHANGE_NAME, AmqpClient::Channel::EXCHANGE_TYPE_DIRECT, false, true, true);
+    auto queue_name = channel->DeclareQueue("", false, true, true, true);
+    channel->BindQueue(queue_name, EXCHANGE_NAME, emo_uuid_);
+    auto consumer_tag = channel->BasicConsume(queue_name, "", true, true, true, 1);
+
+    while(sent_list_.size() > 0) {
+
+        fmt::print("Remaining scenarios: {}\n", sent_list_.size());
+        fmt::print("[*] Waiting for execution service: {} \n", emo_uuid_);
+
+        auto envelop = channel->BasicConsumeMessage(consumer_tag);
+        auto message_payload = envelop->Message()->Body();
+        auto routing_key = envelop->RoutingKey();
+        std::string received_exec_uuid = message_payload;
+
+        if (routing_key == emo_uuid_) {
+            std::string exec_results_str = *redis_.hget("executed_results", received_exec_uuid);
+            exec_results_str_all.push_back(exec_results_str);
+            auto scenario_id = sent_list_[received_exec_uuid];
+            sent_list_.erase(received_exec_uuid);
+            //redis_.lpush("scenario_ids", scenario_id);
+            redis_.hdel("emo_data", received_exec_uuid);
+        }
+    }
+
+
+    return exec_results_str_all;
 }
 
 

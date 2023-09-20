@@ -112,19 +112,19 @@ void my_test(std::string land_filename, std::string animal_filename) {
     std::string counties = "410";
 
     std::string emo_str = fmt::format("empty_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}",
-          atm_dep_data_set,
-          back_out_scenario,
-          base_condition,
-          base_load,
-          cost_profile,
-          climate_change_data_set,
-          n_counties,
-          historical_crop_need_scenario,
-          point_source_data_set,
-          scenario_type,
-          soil_p_data_set,
-          source_data_revision,
-          counties
+          atm_dep_data_set, //1
+          back_out_scenario, //2
+          base_condition, //3
+          base_load, //4
+          cost_profile, //5
+          climate_change_data_set, //6
+          n_counties, //7
+          historical_crop_need_scenario, //8
+          point_source_data_set, //9
+          scenario_type, //10
+          soil_p_data_set, //11
+          source_data_revision, //12
+          counties //13
           );
     //                       0     1   2   3  4 5 6  7  8    9  10 11 12 13
     std::cout<<"emo_str: "<<emo_str<<std::endl;

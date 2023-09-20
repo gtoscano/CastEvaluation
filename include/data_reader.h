@@ -115,11 +115,15 @@ public:
      * @return the geography if it is in the dictionary otherwise returns -1
      */
     int get_geography(int lrseg) const;
+
+    void read_geography_county();
+    const std::unordered_map<int, std::tuple<int, std::string, std::string, std::string> >& get_geograpy_county() const;
     /**
      * Get the dictionary containing the load source to load source group
      *
      * @return a unordered_map<int,int> with the map lrseg -> state
      */
+
     const std::unordered_map<int, int>& get_states() const;
     /**
      * It provides  the state of a given lrseg. If lrseg is not
@@ -164,6 +168,7 @@ public:
 private:
     std::unordered_map<int, int> u_u_group_dict; ///< A map<int,int>: load source -> load source group.
     std::unordered_map<int, int> s_geography_dict; ///< A map<int,int>: lrseg -> geography.
+    std::unordered_map<int, std::tuple<int, std::string, std::string, std::string> > geography_county_;
     std::unordered_map<int, int> s_state_dict; ///< A map<int,int>: lrseg -> state.
     std::unordered_map<int, std::unordered_map<int, double>> bmp_cost_dict_; ///< A map<int,<int,double>>: cost_profile -> bmp -> total cost per unit.
     std::unordered_map<std::string, double> bmp_cost_;

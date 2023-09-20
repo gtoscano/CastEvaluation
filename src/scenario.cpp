@@ -86,10 +86,10 @@ void Scenario::load(const std::string& filename) {
     animal_complete_ = json_obj["animal_complete"].get<std::unordered_map<std::string, std::vector<int>>>();
     bmp_cost_ = json_obj["bmp_cost"].get<std::unordered_map<std::string, double>>();
     lrseg_ = json_obj["lrseg"].get<std::unordered_map<std::string, std::vector<int>>>();
-    counties_ = json_obj["counties"].get<std::vector<int>>();
+    counties_ = json_obj["counties"].get<std::unordered_map<std::string,int>>();
 
     scenario_data_ = json_obj["scenario_data"].dump();
-    scenario_data2_ = json_obj["scenario_data2"];
+    scenario_data2_ = json_obj["scenario_data_str"];
     phi_dict_ = json_obj["phi"].get<std::unordered_map<std::string, std::vector<double>>>();
 
     std::unordered_map<std::string, int> u_u_group_str;
@@ -98,8 +98,16 @@ void Scenario::load(const std::string& filename) {
     for (const auto& [key, val] : u_u_group_str){
         u_u_group_[std::stoi(key)] = val;
     }
-    s_geography_ = json_obj["s_geography"].get<std::unordered_map<int, int>>();
-    s_state_ = json_obj["s_state"].get<std::unordered_map<int, int>>();
+    auto geography_tmp = json_obj["s_geography"].get<std::unordered_map<std::string, int>>();
+
+    for (const auto& [key, val] : geography_tmp){
+        s_geography_[std::stoi(key)] = val;
+    }
+
+    auto state_tmp = json_obj["s_state"].get<std::unordered_map<std::string, int>>();
+    for (const auto& [key, val] : state_tmp){
+        s_state_[std::stoi(key)] = val;
+    }
 
     compute_ef_keys();
 }
@@ -235,19 +243,24 @@ void Scenario::create_scenario() {
         }
     }
 
+
     for(const auto& data : data_reader.get_lrseg() ) {
         if(std::ranges::find(lrseg_lst, data[0]) != lrseg_lst.end()) {
             //data[0] = lrseg, data[1] = fips, data[2] = state_id, data[3] = county
-            lrseg_[std::to_string(data[0])] = {data[1], data[2], data[3]};
+            lrseg_[std::to_string(data[0])] = {data[1], data[2], data[3], s_geography_[data[0]]};
+            counties_[std::to_string(data[3])] = data[2];
+
+            /*
             if(std::ranges::find(counties_, data[3]) == counties_.end()) {
                 counties_.push_back(data[3]);
             }
+            */
 
         }
     }
 
 
-    for (const auto& county : counties_ ) {
+    for (const auto& [county, value]: counties_ ) {
         auto key_animal = fmt::format("{}_{}", base_condition, county);
         for (const auto &key: data_reader.get_animal_idx(key_animal)) {
             animal_[key]=data_reader.get_animal(key);
@@ -296,8 +309,8 @@ void Scenario::create_scenario() {
 
 
     auto scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-4-10/Berkeley/executions/2/results/";
-    //scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-4-10/Jefferson/executions/2/results/";
-    scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-4-10/Hardy/executions/2/results/";
+    scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-4-10/Jefferson/executions/2/results/";
+    //scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-4-10/Hardy/executions/2/results/";
     LandScenario cf(data_reader);
 
     auto exec_id = "0";
@@ -348,7 +361,7 @@ void Scenario::save(std::string filename) {
     json_obj["lrseg"] = lrseg_;
     json_obj["counties"] = counties_;
     json_obj["scenario_data"] = json::parse(scenario_data_);
-    json_obj["scenario_data2"] = scenario_data2_;
+    json_obj["scenario_data_str"] = scenario_data2_;
     json_obj["phi"] = phi_dict_;
 
     std::unordered_map<std::string, int> u_u_group_str;
@@ -356,8 +369,19 @@ void Scenario::save(std::string filename) {
         u_u_group_str[std::to_string(key)] = val;
     }
     json_obj["u_u_group"] = u_u_group_str;
-    json_obj["s_geography"] = s_geography_;
-    json_obj["s_state"] = s_state_;
+    // geography
+    json geography_str;
+    for (const auto& [key, val] : s_geography_){
+        geography_str[std::to_string(key)] = val;
+    }
+    json_obj["s_geography"] = geography_str;
+    // state
+    json state_str;
+    for (const auto& [key, val] : s_state_){
+        state_str[std::to_string(key)] = val;
+    }
+
+    json_obj["s_state"] = state_str;
     json_obj["sum_load_invalid"] = sum_load_invalid_;
     json_obj["sum_load_valid"] = sum_load_valid_;
 

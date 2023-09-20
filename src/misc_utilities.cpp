@@ -8,6 +8,8 @@
 #include <vector>
 #include <chrono>
 #include <ctime>
+#include <random>
+
 
 namespace fs = std::filesystem;
 
@@ -72,4 +74,25 @@ namespace misc_utilities {
         oss << std::put_time(&now_tm, "%H:%M:%S");
         return oss.str();
     }
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(0, 1);
+    double rand_double(double lower_bound, double upper_bound) {
+        return lower_bound + dis(gen) * (upper_bound - lower_bound);
+    }
+
+    void mkdir(std::string dir_path) {
+    
+        if (!fs::exists(dir_path)) {
+            if (fs::create_directories(dir_path)) {
+                std::cout << "Directory created successfully." << std::endl;
+            } else {
+                std::cerr << "Failed to create directory." << std::endl;
+            }
+        } else {
+            std::cout << "Directory already exists. Doing nothing." << std::endl;
+        }
+    }
+
 }

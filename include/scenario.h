@@ -109,7 +109,8 @@ private:
     std::unordered_map<std::string, std::vector<int>> lrseg_;
     std::string scenario_data_;
     std::string scenario_data2_;
-    std::vector<int> counties_;
+    std::unordered_map<std::string, int> counties_;
+    //std::vector<int> counties_;
 
     std::vector<std::string> parcels_valid_keys_;
     std::vector<std::string> parcels_invalid_keys_;

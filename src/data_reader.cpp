@@ -37,6 +37,7 @@ void DataReader::read_all() {
     read_animal_bmp_cost();
     read_lrseg();
     read_scenario();
+    read_geography_county();
 }
 
 
@@ -143,6 +144,39 @@ void DataReader::read_lrseg() {
 
 const std::vector<std::vector<int>>& DataReader::get_lrseg() const {
     return lrseg_;
+}
+
+
+void DataReader::read_geography_county() {
+    int counter = 0;
+
+    auto filename = fmt::format("{}/TblGeographyCounty.csv", csvs_path);
+
+    csv::CSVReader reader(filename);
+    for(auto& row: reader) {
+        try {
+            //GeographyId,CountyId,FIPS,CountyName,StateAbbreviation
+
+            int geography = row["GeographyId"].get<int>();
+            int county = row["CountyId"].get<int>();
+            std::string fips = row["FIPS"].get<std::string>();
+            std::string county_name = row["CountyName"].get<std::string>();
+            std::string state = row["StateAbbreviation"].get<std::string>();
+            geography_county_[geography] = {county, fips, county_name, state};
+        } catch (std::exception &e) {
+            // Catch any exceptions that derive from std::exception
+            std::cerr << "Caught exception: " << e.what() << std::endl;
+        } catch (...) {
+            // Catch any other exceptions
+            std::cerr << "Caught unknown exception." << std::endl;
+        }
+        counter++;
+    }
+    fmt::print("Geography County Read {}\n", counter);
+}
+
+const std::unordered_map<int, std::tuple<int, std::string, std::string, std::string> >& DataReader::get_geograpy_county() const {
+    return geography_county_;
 }
 
 int DataReader::read_bmp_cost(const std::string& filename) {
