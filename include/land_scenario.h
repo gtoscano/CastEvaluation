@@ -63,6 +63,7 @@ public:
     std::vector<LandSol> get_land_scenario();
     LandSol prepend(std::string key, int bmp, double amount);
     double compute_cost(int cost_profile_id);
+    double compute_cost(const std::string& loads_filename, int cost_profile_id);
 private:
     std::vector<LandSol> land_scenario;
     const DataReader& data_;

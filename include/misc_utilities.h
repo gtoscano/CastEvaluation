@@ -18,6 +18,7 @@ namespace misc_utilities {
     * @param  default_value The default value
     * @return either the environment variable or the default value.
     */
+    bool is_parquet_file(const std::string& filename);
     std::string get_env_var(std::string const &key, std::string const &default_value);
 
     std::string find_file(std::string path,

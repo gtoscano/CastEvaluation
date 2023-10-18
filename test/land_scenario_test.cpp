@@ -35,7 +35,7 @@ void mkdir(std::string dirPath) {
     }
 }
 
-void my_test(std::string land_filename, std::string animal_filename) {
+void my_test(const std::string& land_filename, const std::string& animal_filename, const std::string& reportloads_filename) {
     double total_cost = 0.0;
 
     std::string emo_uuid = xg::newGuid().str();
@@ -45,10 +45,10 @@ void my_test(std::string land_filename, std::string animal_filename) {
     //exec_uuid = "ceeff93d-724f-4431-bc5d-c564ff3af250";
     fmt::print("emo_uuid: {}\nexec_uuid: {}\n", emo_uuid, exec_uuid);
 
-    std::string filename = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Berkeley/base/reportloads_wWKTZpn.csv";
-    filename = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Jefferson/base/reportloads_kjVfBNe.csv";
+    //std::string filename = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Berkeley/base/reportloads_wWKTZpn.csv";
+    //filename = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Jefferson/base/reportloads_kjVfBNe.csv";
     ReportLoads base_scenario;
-    base_scenario.load(filename);
+    base_scenario.load(reportloads_filename);
     //auto scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Berkeley/executions/0/results/first/test";
     //auto scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-4-10/Berkeley/executions/2/results/";
     auto exec_id = "0";
@@ -59,30 +59,52 @@ void my_test(std::string land_filename, std::string animal_filename) {
     bool animal_bool = false;
     if (fs::exists(land_filename)) {
         LandScenario cf(data_reader);
-        cf.load_land_scenario(land_filename);
-        auto scen = cf.get_land_scenario();
-        auto par_filename = fmt::format("{}/{}_impbmpsubmittedland.parquet", emo_path, exec_uuid);
-        cf.write_land(scen, par_filename);
-        auto cost_profile_id = 8;
-        auto total = cf.compute_cost(cost_profile_id);
-        total_cost += total;
+        if(misc_utilities::is_parquet_file(land_filename)) {
+            auto par_filename = fmt::format("{}/{}_impbmpsubmittedland.parquet", emo_path, exec_uuid);
+            misc_utilities::copy_file(land_filename, par_filename);
+            auto cost_profile_id = 7;
+            auto total = cf.compute_cost(land_filename, cost_profile_id);
+            total_cost += total;
+    
+            fmt::print("Total Land Cost: {}\n", total);
+            land_bool = true;
+        } else {
 
-        fmt::print("Total Land Cost: {}\n", total);
-        land_bool = true;
+            cf.load_land_scenario(land_filename);
+            auto scen = cf.get_land_scenario();
+            auto par_filename = fmt::format("{}/{}_impbmpsubmittedland.parquet", emo_path, exec_uuid);
+            cf.write_land(scen, par_filename);
+            auto cost_profile_id = 7;
+            auto total = cf.compute_cost(cost_profile_id);
+            total_cost += total;
+    
+            fmt::print("Total Land Cost: {}\n", total);
+            land_bool = true;
+        }
     }
 
     if (fs::exists(animal_filename)) {
         AnimalScenario animal(data_reader);
-        animal.load_scenario(animal_filename);
-        auto animal_scen = animal.get_scenario();
-        //auto source = fmt::format("impbmpsubmittedanimal.parquet", emo_path, exec_uuid);
-        auto destination = fmt::format("{}/{}_impbmpsubmittedanimal.parquet", emo_path, exec_uuid);
-        animal.write(animal_scen, destination);
-        auto cost_profile_id = 8;
-        auto total = animal.compute_cost(cost_profile_id);
-        total_cost += total;
-        fmt::print("Total Animal Cost: {}\n", total);
-        animal_bool = true;
+        if(misc_utilities::is_parquet_file(animal_filename)) {
+            auto par_filename = fmt::format("{}/{}_impbmpsubmittedanimal.parquet", emo_path, exec_uuid);
+            misc_utilities::copy_file(animal_filename, par_filename);
+            auto cost_profile_id = 7;
+            auto total = animal.compute_cost(animal_filename, cost_profile_id);
+            total_cost += total;
+            fmt::print("Total Animal Cost: {}\n", total);
+            animal_bool = true;
+        } else {
+            animal.load_scenario(animal_filename);
+            auto animal_scen = animal.get_scenario();
+            //auto source = fmt::format("impbmpsubmittedanimal.parquet", emo_path, exec_uuid);
+            auto destination = fmt::format("{}/{}_impbmpsubmittedanimal.parquet", emo_path, exec_uuid);
+            animal.write(animal_scen, destination);
+            auto cost_profile_id = 7;
+            auto total = animal.compute_cost(cost_profile_id);
+            total_cost += total;
+            fmt::print("Total Animal Cost: {}\n", total);
+            animal_bool = true;
+        }
         //misc_utilities::copy_file(source, destination);
     }
     fmt::print("Grand Total Cost: {}\n", total_cost);
@@ -103,13 +125,16 @@ void my_test(std::string land_filename, std::string animal_filename) {
     int base_load = 6;
     int cost_profile = 8;
     int climate_change_data_set = 59;
+    int n_counties = 1;
     int historical_crop_need_scenario = 6608;
     int point_source_data_set = 158; //it was 36 for all our previous executions; //158 = 2019
+    //point_source_data_set = 36;
     int scenario_type = 2;
     int soil_p_data_set = 31;
-    int n_counties = 1;
     int source_data_revision = 8;
-    std::string counties = "410";
+    std::string counties = "381";
+    counties = "410";
+    //empty_38_6611_256_6_4_59_1_6608_158_2_31_8_381
 
     std::string emo_str = fmt::format("empty_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}",
           atm_dep_data_set, //1
@@ -128,8 +153,10 @@ void my_test(std::string land_filename, std::string animal_filename) {
           );
     //                       0     1   2   3  4 5 6  7  8    9  10 11 12 13
     std::cout<<"emo_str: "<<emo_str<<std::endl;
-    std::string emo_data = "empty_38_6611_256_6_8_59_1_6608_158_2_31_8_410";
-    std::cout<<"emo_data: "<<emo_data<<std::endl;
+    //std::string emo_data = "empty_38_6611_256_6_8_59_1_6608_158_2_31_8_410";
+    //emo_data = "empty_38_6611_256_6_7_59_4_6608_158_2_31_8_362_391_403_404";
+    //emo_data = "empty_38_6611_256_6_7_59_1_6608_158_2_31_8_381";
+    //std::cout<<"emo_data: "<<emo_data<<std::endl;
     //point source dataset 158
 
     //emo_uuid = "b3795dee-e704-4268-ad5e-531c9f911e3f";
@@ -144,7 +171,7 @@ void my_test(std::string land_filename, std::string animal_filename) {
     fmt::print("N: {}, P: {}, S: {}\n",loads[0], loads[1], loads[2]);
 
     ReportLoads base_scenario2;
-    filename = fmt::format("{}/{}_reportloads.csv", emo_path, exec_uuid);
+    auto filename = fmt::format("{}/{}_reportloads.csv", emo_path, exec_uuid);
     base_scenario2.load(filename);
     fmt::print("Original Loads: \n");
     base_scenario.print_loads();
@@ -154,12 +181,14 @@ void my_test(std::string land_filename, std::string animal_filename) {
 
 int main(int argc, char* argv[]) {
     std::string land_filename = "";
+    std::string reportloads_filename = "";
     std::string animal_filename = "";
     po::options_description desc("Allowed options");
     desc.add_options()
         ("help,h", "produce help message")
         ("land,l", po::value<std::string>(), "land scenario file")
         ("animal,a", po::value<std::string>(), "animal scenario file")
+        ("reportloads,r", po::value<std::string>(), "report loads file")
     ;
 
     po::variables_map vm;
@@ -191,6 +220,13 @@ int main(int argc, char* argv[]) {
         std::cout << "Animal scenario file was not set.\n";
     }
 
-    my_test(land_filename, animal_filename);
+    if (vm.count("reportloads")) {
+        std::cout << "Reportloads file was set to " << vm["reportloads"].as<std::string>() << ".\n";
+        reportloads_filename = vm["reportloads"].as<std::string>();
+    } else {
+        std::cout << "Report loads file was not set.\n";
+    }
+
+    my_test(land_filename, animal_filename, reportloads_filename);
     return 0;
 }

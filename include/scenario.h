@@ -29,7 +29,7 @@ public:
     void load_solution(const std::string& filename);
     void load(const std::string& filename);
 
-    void create_scenario();
+    void create_scenario(size_t scenario_id, const std::string& filename, const std::string& output_filename);
     void save(std::string filename);
 
     std::vector<double> compute_loads(const std::vector<ReportLoadSt>& my_parcel);
@@ -122,6 +122,8 @@ private:
     std::vector<double> sum_load_invalid_;
     std::vector<double> sum_load_valid_;
     std::vector<int> selected_bmps;
-
+    std::unordered_map<int, std::tuple<int, int, std::string, std::string, std::string> > geography_county_;
+    std::unordered_map<int, double> pct_by_valid_load_;
+    std::vector<std::string> valid_lc_bmps_;
 };
 #endif //CBO_EVALUATION_SCENARIO_H

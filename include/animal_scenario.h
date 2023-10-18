@@ -55,6 +55,7 @@ public:
     void load_scenario(const std::string& filename);
     std::vector<AnimalSol> get_scenario();
     double compute_cost(int cost_profile_id);
+    double compute_cost(const std::string& filename, int cost_profile_id);
 private:
     std::vector<AnimalSol> scenario_;
     const DataReader& data_;

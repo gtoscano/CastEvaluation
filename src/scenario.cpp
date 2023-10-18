@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <memory>
 #include <random>
+#include <boost/algorithm/string.hpp>
 
 using json = nlohmann::json;
 
@@ -86,11 +87,13 @@ void Scenario::load(const std::string& filename) {
     animal_complete_ = json_obj["animal_complete"].get<std::unordered_map<std::string, std::vector<int>>>();
     bmp_cost_ = json_obj["bmp_cost"].get<std::unordered_map<std::string, double>>();
     lrseg_ = json_obj["lrseg"].get<std::unordered_map<std::string, std::vector<int>>>();
-    counties_ = json_obj["counties"].get<std::unordered_map<std::string,int>>();
+    counties_ = json_obj["counties2"].get<std::unordered_map<std::string,int>>();
 
     scenario_data_ = json_obj["scenario_data"].dump();
     scenario_data2_ = json_obj["scenario_data_str"];
     phi_dict_ = json_obj["phi"].get<std::unordered_map<std::string, std::vector<double>>>();
+
+    valid_lc_bmps_ = json_obj["valid_lc_bmps"].get<std::vector<std::string>>();
 
     std::unordered_map<std::string, int> u_u_group_str;
     u_u_group_str = json_obj["u_u_group"].get<std::unordered_map<std::string, int>>();
@@ -108,6 +111,21 @@ void Scenario::load(const std::string& filename) {
     for (const auto& [key, val] : state_tmp){
         s_state_[std::stoi(key)] = val;
     }
+
+    auto geography_county_tmp = json_obj["counties"].get<std::unordered_map<std::string, std::tuple<int, int, std::string, std::string, std::string>>>();
+    for (const auto& [key, val] : geography_county_tmp){
+        geography_county_[std::stoi(key)] = val;
+    }
+
+
+    auto pct_by_valid_load_tmp = json_obj["pct_by_valid_load"].get<std::unordered_map<std::string,double>>();
+    for (const auto& [key, val] : pct_by_valid_load_tmp){
+        pct_by_valid_load_[std::stoi(key)] = val;
+    }
+
+
+    sum_load_valid_ = json_obj["sum_load_valid"].get<std::vector<double>>();
+    sum_load_invalid_ = json_obj["sum_load_invalid"].get<std::vector<double>>();
 
     compute_ef_keys();
 }
@@ -139,10 +157,20 @@ std::vector<double> Scenario::compute_loads(const std::vector<ReportLoadSt>& my_
     return ret;
 }
 
-void Scenario::create_scenario() {
-    int base_condition = 256;
+void Scenario::create_scenario(size_t scenario_id, const std::string& filename, const std::string& output_filename) { 
     DataReader data_reader;
     data_reader.read_all();
+
+    scenario_data_ = data_reader.get_scenario_data(scenario_id);
+    scenario_data2_ = data_reader.get_scenario_data2(scenario_id);
+    std::vector<std::string> scenario_data_vec;
+    boost::split(scenario_data_vec, scenario_data2_, boost::is_any_of("_"));
+
+    //int base_condition = 256;
+    int base_condition = std::stoi(scenario_data_vec[3]);
+    std::cout<<"Base condition: "<<base_condition<<std::endl;
+
+
     for(const auto& [key,lst] : data_reader.get_animal_grp_bmps()) {
         animal_grp_bmps_[std::to_string(key)] = lst;
     }
@@ -153,7 +181,8 @@ void Scenario::create_scenario() {
         lc_bmps_.load_file(lc_bmp_grp_filename_);
     }
 
-    auto filename = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Berkeley/base/reportloads_wWKTZpn.csv";
+    /*
+     * auto filename = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Berkeley/base/reportloads_wWKTZpn.csv";
     filename = "/home/gtoscano/django/api4opt4-tests/control-all-vars/Grant/base/reportloads_8rVciy4.csv";
     filename = "/home/gtoscano/django/api4opt4-tests/95_math_5_cc_20_eps-finished/Hampshire/base/reportloads_mkmbUx8.csv";
     filename = "/home/gtoscano/django/api4opt4-tests/95_math_5_cc_20_eps-finished/Monroe/base/reportloads_7zEPya8.csv";
@@ -162,8 +191,10 @@ void Scenario::create_scenario() {
     filename = "/home/gtoscano/django/api4opt4-tests/control-all-vars/Preston/base/reportloads_SVFhKZh.csv";
     filename = "/home/gtoscano/django/api4opt4-tests/95_math_5_cc_20_eps-finished/Tucker/base/reportloads_mVd56Ce.csv";
     filename = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Jefferson/base/reportloads_kjVfBNe.csv";
+    filename = "reportloads_Q6tvVIl.csv";
     //filename = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Mineral/base/reportloads_fq4qmYb.csv";
     //filename = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Hardy/base/reportloads_jkKeDOl.csv";
+    */
     ReportLoads base_scenario;
     base_scenario.load(filename);
     base_scenario.remove_invalid();
@@ -185,6 +216,7 @@ void Scenario::create_scenario() {
     u_u_group_ = data_reader.get_u_u_groups();
     s_geography_ = data_reader.get_geographies();
     s_state_ = data_reader.get_states();
+    geography_county_ = data_reader.get_geography_county();
 
     auto lc_bmp_from_to = data_reader.get_lc_bmp_from_to();
     std::vector<int> load_src_list;
@@ -196,6 +228,8 @@ void Scenario::create_scenario() {
 
     std::vector<int> lrseg_lst;
     //for(const auto& value : parcels_definitions ) {
+    //
+    std::unordered_map<int, double> accum_by_valid_load_tmp;
 
     std::vector<std::string> parcel_keys;
     for(const auto& value : parcels_valid_) {
@@ -203,11 +237,25 @@ void Scenario::create_scenario() {
         if( value.agency != 9) continue;
         if (ef_bmps_.valid_load_src(value.load_src) && value.amount > 1) {
             parcel_keys.push_back(key);
+            accum_by_valid_load_tmp[value.load_src] += value.amount;
         }
     }
+
+    double total_sum_load = 0.0;
+    for (const auto& [key, value] : accum_by_valid_load_tmp) {
+        total_sum_load += value;
+    }
+    for (const auto& [key, value] : accum_by_valid_load_tmp) {
+        pct_by_valid_load_[key] = (value*100.0) / total_sum_load;
+    }
+
     for(const auto& value : parcels_valid_) {
         auto key = fmt::format("{}_{}_{}", value.lrseg, value.agency, value.load_src);
+
+        //GTP: Hay que checar bien esto
         if( value.agency != 9) continue;
+
+
         if(std::ranges::find(lrseg_lst, value.lrseg) == lrseg_lst.end()) {
             lrseg_lst.push_back(value.lrseg);
         }
@@ -243,7 +291,6 @@ void Scenario::create_scenario() {
         }
     }
 
-
     for(const auto& data : data_reader.get_lrseg() ) {
         if(std::ranges::find(lrseg_lst, data[0]) != lrseg_lst.end()) {
             //data[0] = lrseg, data[1] = fips, data[2] = state_id, data[3] = county
@@ -271,6 +318,7 @@ void Scenario::create_scenario() {
         }
     }
 
+
     /***/
     for(const auto& value : parcels_all_) {
         auto key = fmt::format("{}_{}_{}", value.lrseg, value.agency, value.load_src);
@@ -294,9 +342,6 @@ void Scenario::create_scenario() {
     /****/
     bmp_cost_ = data_reader.get_bmp_cost();
 
-    scenario_data_ = data_reader.get_scenario_data(3814);
-    scenario_data2_ = data_reader.get_scenario_data2(3814);
-
     random_init_x();
 
     normalize_efficiency();
@@ -304,8 +349,7 @@ void Scenario::create_scenario() {
     compute_lc_size();
     normalize_land_conversion();
     compute_lc();
-    save("prueba.json");
-
+    save(output_filename);
 
 
     auto scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-4-10/Berkeley/executions/2/results/";
@@ -359,10 +403,13 @@ void Scenario::save(std::string filename) {
     json_obj["animal_complete"] = animal_complete_;
     json_obj["bmp_cost"] = bmp_cost_;
     json_obj["lrseg"] = lrseg_;
-    json_obj["counties"] = counties_;
+    json_obj["counties2"] = counties_;
     json_obj["scenario_data"] = json::parse(scenario_data_);
     json_obj["scenario_data_str"] = scenario_data2_;
     json_obj["phi"] = phi_dict_;
+    std::vector<std::string> valid_lc_bmps_str = {"12"};
+    valid_lc_bmps_ = valid_lc_bmps_str;
+    json_obj["valid_lc_bmps"] = valid_lc_bmps_str; 
 
     std::unordered_map<std::string, int> u_u_group_str;
     for (const auto& [key, val] : u_u_group_){
@@ -381,9 +428,22 @@ void Scenario::save(std::string filename) {
         state_str[std::to_string(key)] = val;
     }
 
+    json geography_county_json;
+    for (const auto& [key, val] : geography_county_){
+        geography_county_json[std::to_string(key)] = val;
+    }
+
+    json pct_by_valid_load_json;
+    for (const auto& [key, val] : pct_by_valid_load_){
+        pct_by_valid_load_json[std::to_string(key)] = val;
+    }
+
+
     json_obj["s_state"] = state_str;
     json_obj["sum_load_invalid"] = sum_load_invalid_;
     json_obj["sum_load_valid"] = sum_load_valid_;
+    json_obj["counties"] = geography_county_json; 
+    json_obj["pct_by_valid_load"] = pct_by_valid_load_json;
 
     //nlohmann::to_json(json_obj["land_conversion"], valid_lc_from_parcel);
     std::ofstream file(filename);

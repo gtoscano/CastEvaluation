@@ -72,7 +72,7 @@ void DataReader::read_scenario() {
             scenario_data["SourceDataRevisionId"]= row["SourceDataRevisionId"].get<int>();
             scenario_data_[ScenarioId] = scenario_data.dump();
 
-            std::string scenario_name = "";
+            std::string scenario_name = "empty";
             int atm_dep_data_set= row["AtmDepDataSetId"].get<int>();
             int back_out_scenario= row["BackoutScenarioId"].get<int>();
             int base_condition= row["BaseConditionId"].get<int>();
@@ -84,10 +84,12 @@ void DataReader::read_scenario() {
             int scenario_type= row["ScenarioTypeId"].get<int>();
             int soil_p_data_set= row["SoilPDataSetId"].get<int>();
             int source_data_revision= row["SourceDataRevisionId"].get<int>();
-            std::string scenario_data2 = fmt::format("{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}",scenario_name,\
-                                      atm_dep_data_set, back_out_scenario, base_condition,\
+            std::string number = "N";
+            std::string atm_dep_data_set_str = "A";//it is using 0, and the atm for 2019 is 38 that is why I am using A to avoid confusion and change it later
+            std::string scenario_data2 = fmt::format("{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}",scenario_name,\
+                                      atm_dep_data_set_str, back_out_scenario, base_condition,\
                                       base_load, cost_profile, climate_change_data_set,\
-                                      historical_crop_need_scenario, point_source_data_set,\
+                                      number, historical_crop_need_scenario, point_source_data_set,\
                                       scenario_type, soil_p_data_set, source_data_revision);
 
             scenario_data2_[ScenarioId] = scenario_data2;
@@ -157,12 +159,13 @@ void DataReader::read_geography_county() {
         try {
             //GeographyId,CountyId,FIPS,CountyName,StateAbbreviation
 
-            int geography = row["GeographyId"].get<int>();
             int county = row["CountyId"].get<int>();
+            int geography = row["GeographyId"].get<int>();
+            int geography2 = row["GeographyType2Id"].get<int>();
             std::string fips = row["FIPS"].get<std::string>();
             std::string county_name = row["CountyName"].get<std::string>();
             std::string state = row["StateAbbreviation"].get<std::string>();
-            geography_county_[geography] = {county, fips, county_name, state};
+            geography_county_[county] = {geography, geography2, fips, county_name, state};
         } catch (std::exception &e) {
             // Catch any exceptions that derive from std::exception
             std::cerr << "Caught exception: " << e.what() << std::endl;
@@ -175,7 +178,7 @@ void DataReader::read_geography_county() {
     fmt::print("Geography County Read {}\n", counter);
 }
 
-const std::unordered_map<int, std::tuple<int, std::string, std::string, std::string> >& DataReader::get_geograpy_county() const {
+const std::unordered_map<int, std::tuple<int, int, std::string, std::string, std::string> >& DataReader::get_geography_county() const {
     return geography_county_;
 }
 
