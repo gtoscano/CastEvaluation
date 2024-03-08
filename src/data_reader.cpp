@@ -87,7 +87,7 @@ void DataReader::read_scenario() {
             std::string number = "N";
             std::string atm_dep_data_set_str = "A";//it is using 0, and the atm for 2019 is 38 that is why I am using A to avoid confusion and change it later
             std::string scenario_data2 = fmt::format("{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}",scenario_name,\
-                                      atm_dep_data_set_str, back_out_scenario, base_condition,\
+                                      atm_dep_data_set, back_out_scenario, base_condition,\
                                       base_load, cost_profile, climate_change_data_set,\
                                       number, historical_crop_need_scenario, point_source_data_set,\
                                       scenario_type, soil_p_data_set, source_data_revision);
@@ -102,7 +102,7 @@ void DataReader::read_scenario() {
         }
         counter++;
     }
-    fmt::print("Land River Segument Read {}\n", counter);
+    //fmt::print("Land River Segument Read {}\n", counter);
 }
 
 std::string DataReader::get_scenario_data(int scenario_id) {
@@ -141,7 +141,7 @@ void DataReader::read_lrseg() {
         }
         counter++;
     }
-    fmt::print("Land River Segument Read {}\n", counter);
+    //fmt::print("Land River Segument Read {}\n", counter);
 }
 
 const std::vector<std::vector<int>>& DataReader::get_lrseg() const {
@@ -175,7 +175,7 @@ void DataReader::read_geography_county() {
         }
         counter++;
     }
-    fmt::print("Geography County Read {}\n", counter);
+    //fmt::print("Geography County Read {}\n", counter);
 }
 
 const std::unordered_map<int, std::tuple<int, int, std::string, std::string, std::string> >& DataReader::get_geography_county() const {
@@ -215,7 +215,7 @@ int DataReader::read_bmp_cost(const std::string& filename) {
         }
         counter++;
     }
-    fmt::print("Bmp Cost read {}\n", counter);
+    //fmt::print("Bmp Cost read {}\n", counter);
     return counter;
 }
 
@@ -273,7 +273,7 @@ void DataReader::read_animal_grp_bmps() {
         }
         counter++;
     }
-    fmt::print("Animal Grp Bmp read {}\n", counter);
+    //fmt::print("Animal Grp Bmp read {}\n", counter);
 }
 
 const std::unordered_map<int, std::vector<int>>& DataReader::get_animal_grp_bmps() const {
@@ -316,7 +316,7 @@ void DataReader::read_animal_population() {
         }
         counter++;
     }
-    fmt::print("Animal read {}\n", counter);
+    //fmt::print("Animal read {}\n", counter);
 }
 
 const std::unordered_map<std::string, double>& DataReader::get_animal() const {
@@ -331,6 +331,9 @@ const std::vector<std::string>& DataReader::get_animal_idx(std::string key) cons
     return animal_idx_.at(key);
 }
 
+bool DataReader::is_animal_in_idx(std::string key) {
+    return animal_idx_.contains(key);
+}
 void DataReader::read_load_src_to_bmp_list() {
     int counter = 0;
 
@@ -362,7 +365,7 @@ void DataReader::read_load_src_to_bmp_list() {
         }
         counter++;
     }
-    fmt::print("Load sources to load sources read {}\n", counter);
+    //fmt::print("Load sources to load sources read {}\n", counter);
 }
 /* for livestock everything can apply except 69 (pultred, 203)
  * For poultry we can apply everying.
@@ -404,7 +407,7 @@ void DataReader::read_u_to_u_group() {
         }
         counter++;
     }
-    fmt::print("Load sources to load sources read {}\n", counter);
+    //fmt::print("Load sources to load sources read {}\n", counter);
 }
 
 
@@ -441,7 +444,7 @@ void DataReader::read_lrseg_to_geography() {
         }
         counter++;
     }
-    fmt::print("Geographies read counter {}\n", counter);
+    //fmt::print("Geographies read counter {}\n", counter);
 }
 
 const std::unordered_map<int, int>& DataReader::get_geographies() const {

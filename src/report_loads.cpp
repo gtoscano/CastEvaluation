@@ -127,8 +127,8 @@ void ReportLoads::load(const std::string& filename) {
             std::cerr << "Caught unknown exception." << std::endl;
         }
     }
-    std::cout<<"Amount of rows = 0: " << amount_zero_counter<<std::endl;
-    std::cout<<"Amount of rows != 0: " << amount_no_zero_counter<<std::endl;
+    //std::cout<<"Amount of rows = 0: " << amount_zero_counter<<std::endl;
+    //std::cout<<"Amount of rows != 0: " << amount_no_zero_counter<<std::endl;
 }
 
 std::vector<double> ReportLoads::compute_loads(std::string which) {

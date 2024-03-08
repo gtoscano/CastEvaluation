@@ -6,8 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
 
 # Find the spdlog package
-find_package(spdlog REQUIRED)
+#find_package(spdlog REQUIRED)
 find_package(crossguid CONFIG REQUIRED)
+find_package(Threads REQUIRED)
+find_package(spdlog REQUIRED)
 #cmake -DCMAKE_BUILD_TYPE=Debug
 
 FetchContent_Declare(
@@ -27,6 +29,7 @@ set(LIB_LAND_SCENARIO_SOURCES
         src/data_reader.cpp
         src/land_scenario.cpp
         src/animal_scenario.cpp
+        src/manure_scenario.cpp
         src/misc_utilities.cpp
         src/report_loads.cpp
         src/scenario.cpp
@@ -42,6 +45,7 @@ set(LIB_LAND_SCENARIO_HEADERS
         include/data_reader.h
         include/land_scenario.h
         include/animal_scenario.h
+        include/manure_scenario.h
         include/misc_utilities.h
         include/report_loads.h
         include/scenario.h
@@ -51,7 +55,7 @@ add_library(land_scenario ${LIB_LAND_SCENARIO_SOURCES} ${LIB_LAND_SCENARIO_HEADE
 # Set include directories for library 1
 target_include_directories(land_scenario PUBLIC include)
 target_compile_features(land_scenario PUBLIC cxx_std_20)
-target_link_libraries(land_scenario PRIVATE fmt pthread arrow parquet spdlog::spdlog crossguid hiredis redis++ SimpleAmqpClient Threads::Threads)
+target_link_libraries(land_scenario PRIVATE fmt pthread arrow parquet crossguid hiredis redis++ SimpleAmqpClient Threads::Threads)
 
 set(LIB_REPORT_LOADS_SOURCES
         src/report_loads.cpp
@@ -68,4 +72,4 @@ add_library(report_loads ${LIB_REPORT_LOADS_SOURCES} ${LIB_REPORT_LOADS_HEADERS}
 # Set include directories for library 1
 target_include_directories(report_loads PUBLIC include)
 target_compile_features(report_loads PUBLIC cxx_std_20)
-target_link_libraries(report_loads PRIVATE fmt pthread spdlog::spdlog)
+target_link_libraries(report_loads PRIVATE fmt pthread)

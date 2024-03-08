@@ -51,6 +51,7 @@ public:
     const std::unordered_map<std::string, double>& get_animal() const;
     double get_animal(const std::string& key);
     const std::vector<std::string>& get_animal_idx(std::string key) const;
+    bool is_animal_in_idx(std::string key);
 
     /**
      * Reads a CSV file containing the load source to load group information

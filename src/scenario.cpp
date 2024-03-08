@@ -168,7 +168,7 @@ void Scenario::create_scenario(size_t scenario_id, const std::string& filename, 
 
     //int base_condition = 256;
     int base_condition = std::stoi(scenario_data_vec[3]);
-    std::cout<<"Base condition: "<<base_condition<<std::endl;
+    //std::cout<<"Base condition: "<<base_condition<<std::endl;
 
 
     for(const auto& [key,lst] : data_reader.get_animal_grp_bmps()) {
@@ -306,18 +306,38 @@ void Scenario::create_scenario(size_t scenario_id, const std::string& filename, 
         }
     }
 
-
+    std::string counties_str="";
+    int ncounties = 0;
     for (const auto& [county, value]: counties_ ) {
+
+        std::tuple<int, int, std::string, std::string, std::string> tmp = geography_county_.at(std::stoi(county));
+        auto county_lrseg = std::get<0>(tmp);
+        ncounties++;
+        if (counties_str != "") {
+            counties_str =fmt::format("{}_{}", counties_str, county_lrseg);
+        }
+        else {
+            counties_str = fmt::format("{}", county_lrseg);
+        }
+
         auto key_animal = fmt::format("{}_{}", base_condition, county);
-        for (const auto &key: data_reader.get_animal_idx(key_animal)) {
-            animal_[key]=data_reader.get_animal(key);
-            std::vector<std::string> out;
-            misc_utilities::split_str(key, '_', out);
-            auto load_src = out[3];
-            animal_complete_[key] = animal_grp_bmps_[load_src];
+        //check if key_animal is in data_reader.get_animal_idx
+        fmt::print("Key animal: {}\n", key_animal);
+        if (data_reader.is_animal_in_idx(key_animal)) {
+            for (const auto &key: data_reader.get_animal_idx(key_animal)) {
+                animal_[key]=data_reader.get_animal(key);
+                std::vector<std::string> out;
+                misc_utilities::split_str(key, '_', out);
+                auto load_src = out[3];
+                animal_complete_[key] = animal_grp_bmps_[load_src];
+            }
+        }
+        else {
+            fmt::print("Key animal not found: {}\n", key_animal);
         }
     }
-
+    
+    
 
     /***/
     for(const auto& value : parcels_all_) {
@@ -349,9 +369,19 @@ void Scenario::create_scenario(size_t scenario_id, const std::string& filename, 
     compute_lc_size();
     normalize_land_conversion();
     compute_lc();
+    size_t pos = scenario_data2_.find('N');
+    if (pos != std::string::npos) {
+        scenario_data2_.replace(pos, 1, std::to_string(ncounties));
+    }
+    scenario_data2_ = fmt::format("{}_{}", scenario_data2_, counties_str);
+    json scenario_data = json::parse(scenario_data_);
+    scenario_data["counties"] = counties_str;
+    scenario_data["n_counties"] = ncounties;
+    scenario_data_ = scenario_data.dump();
+
     save(output_filename);
 
-
+    /*
     auto scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-4-10/Berkeley/executions/2/results/";
     scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-4-10/Jefferson/executions/2/results/";
     //scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-4-10/Hardy/executions/2/results/";
@@ -371,6 +401,7 @@ void Scenario::create_scenario(size_t scenario_id, const std::string& filename, 
 
     std::sort(parcel_list_.begin(), parcel_list_.end());
     std::sort(parcel_keys.begin(), parcel_keys.end());
+
     if (parcel_list_.size() != parcel_keys.size()) {
         std::cout<<"They are different\n";
     }
@@ -379,6 +410,7 @@ void Scenario::create_scenario(size_t scenario_id, const std::string& filename, 
             std::cout<<"They are different\n";
         }
     }
+
     int tmp_counter_parcels=0;
     int tmp_counter_lc=0;
     for(auto [key, value] : land_conversion_from_bmp_to) {
@@ -387,6 +419,7 @@ void Scenario::create_scenario(size_t scenario_id, const std::string& filename, 
     }
     std::cout<<"parcels that have LC: "<< tmp_counter_parcels<<std::endl;
     std::cout<<"LC "<<tmp_counter_lc<<std::endl;
+    */
 }
 
 void Scenario::save(std::string filename) {
@@ -557,8 +590,8 @@ void Scenario::random_init_x() {
 
     compute_lc_size();
     compute_ef_size();
-    std::cout<<"Efficiency bmps: "<<ef_size_<<"\n";
-    std::cout<<"Land Conversion bmps: "<<lc_size_<<"\n";
+    //std::cout<<"Efficiency bmps: "<<ef_size_<<"\n";
+    //std::cout<<"Land Conversion bmps: "<<lc_size_<<"\n";
 
     int size = ef_size_ + lc_size_;
 
@@ -737,7 +770,7 @@ int Scenario::compute_ef() {
 
     fx[0] = total_cost;
     fx[1] = sum_load_invalid_[load_to_opt_] + pt_load[load_to_opt_];
-    fmt::print("Total Cost: {}. Total Load: {}.\n", fx[0], fx[1]);
+    //fmt::print("Total Cost: {}. Total Load: {}.\n", fx[0], fx[1]);
 
     //write_files_csv2 (selected_bmps, emo_uuid, exec_uuid);
     //write_files_animal_csv2 (selected_bmps, emo_uuid, exec_uuid);
@@ -749,7 +782,7 @@ int Scenario::compute_ef() {
 void Scenario::compute_lc() {
     for (const auto& entry : lc_x_) {
         auto [s, h, u, bmp, amount] = entry;
-        std::cout<<fmt::format("S: {}, h: {}, u: {}, bmp: {}, amount: {}\n", s, h, u, bmp, amount);
+        //std::cout<<fmt::format("S: {}, h: {}, u: {}, bmp: {}, amount: {}\n", s, h, u, bmp, amount);
     }
 
 }

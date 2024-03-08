@@ -4,6 +4,7 @@
 
 #include "land_scenario.h"
 #include "animal_scenario.h"
+#include "manure_scenario.h"
 #include "data_reader.h"
 #include "amqp.h"
 #include "misc_utilities.h"
@@ -35,13 +36,24 @@ void mkdir(std::string dirPath) {
     }
 }
 
-void my_test(const std::string& land_filename, const std::string& animal_filename, const std::string& reportloads_filename) {
+
+int count_numbers(const std::string& str) {
+    if (str.empty()) return 0;
+
+    int count = 1; // Start at 1 to account for the last number
+    for (char ch : str) {
+        if (ch == '_') {
+            count++;
+        }
+    }
+    return count;
+}
+
+void my_test(const std::string& land_filename, const std::string& animal_filename, const std::string& manure_filename, const std::string& reportloads_filename, const std::string& counties, std::string emo_uuid, std::string exec_uuid) {
     double total_cost = 0.0;
 
-    std::string emo_uuid = xg::newGuid().str();
     std::string emo_path = fmt::format("/opt/opt4cast/output/nsga3/{}/", emo_uuid);
     mkdir(emo_path);
-    std::string exec_uuid = xg::newGuid().str();
     //exec_uuid = "ceeff93d-724f-4431-bc5d-c564ff3af250";
     fmt::print("emo_uuid: {}\nexec_uuid: {}\n", emo_uuid, exec_uuid);
 
@@ -49,6 +61,12 @@ void my_test(const std::string& land_filename, const std::string& animal_filenam
     //filename = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Jefferson/base/reportloads_kjVfBNe.csv";
     ReportLoads base_scenario;
     base_scenario.load(reportloads_filename);
+
+    if (fs::exists(reportloads_filename)) {
+
+        auto out_filename = fmt::format("{}/{}_reportloads.csv", emo_path, exec_uuid);
+        misc_utilities::copy_file(reportloads_filename, out_filename);
+    }
     //auto scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-1-5/Berkeley/executions/0/results/first/test";
     //auto scenario_path = "/home/gtoscano/django/api4opt4-tests/innovization-strategy-4-10/Berkeley/executions/2/results/";
     auto exec_id = "0";
@@ -57,6 +75,7 @@ void my_test(const std::string& land_filename, const std::string& animal_filenam
     //auto scen_filename = fmt::format("{}/{}_output_t.csv", scenario_path, exec_id);
     bool land_bool = false;
     bool animal_bool = false;
+    bool manure_bool = false;
     if (fs::exists(land_filename)) {
         LandScenario cf(data_reader);
         if(misc_utilities::is_parquet_file(land_filename)) {
@@ -107,10 +126,36 @@ void my_test(const std::string& land_filename, const std::string& animal_filenam
         }
         //misc_utilities::copy_file(source, destination);
     }
+
+    if (fs::exists(manure_filename)) {
+        ManureScenario manure(data_reader);
+        if(misc_utilities::is_parquet_file(manure_filename)) {
+            auto par_filename = fmt::format("{}/{}_impbmpsubmittedmanuretransport.parquet", emo_path, exec_uuid);
+            misc_utilities::copy_file(manure_filename, par_filename);
+            auto cost_profile_id = 7;
+            auto total = manure.compute_cost(manure_filename, cost_profile_id);
+            total_cost += total;
+            fmt::print("Total manure Cost: {}\n", total);
+            manure_bool = true;
+        } else {
+            manure.load_scenario(manure_filename);
+            auto manure_scen = manure.get_scenario();
+            //auto source = fmt::format("impbmpsubmittedmanure.parquet", emo_path, exec_uuid);
+            auto destination = fmt::format("{}/{}_impbmpsubmittedmanuretransport.parquet", emo_path, exec_uuid);
+            manure.write(manure_scen, destination);
+            auto cost_profile_id = 7;
+            auto total = manure.compute_cost(cost_profile_id);
+            total_cost += total;
+            fmt::print("Total manure Cost: {}\n", total);
+            manure_bool = true;
+        }
+        //misc_utilities::copy_file(source, destination);
+    }
+
     fmt::print("Grand Total Cost: {}\n", total_cost);
 
-    if (land_bool ==false && animal_bool == false ) {
-        fmt::print("No land or animal files\nNo data will be process. Exiting now....\n");
+    if (land_bool ==false && animal_bool == false && manure_bool == false) {
+        fmt::print("No land, animal or manure files\nNo data will be process. Exiting now....\n");
         return;
     }
 
@@ -123,7 +168,7 @@ void my_test(const std::string& land_filename, const std::string& animal_filenam
     int back_out_scenario = 6611;
     int base_condition = 256;
     int base_load = 6;
-    int cost_profile = 8;
+    int cost_profile = 7;
     int climate_change_data_set = 59;
     int n_counties = 1;
     int historical_crop_need_scenario = 6608;
@@ -132,8 +177,15 @@ void my_test(const std::string& land_filename, const std::string& animal_filenam
     int scenario_type = 2;
     int soil_p_data_set = 31;
     int source_data_revision = 8;
-    std::string counties = "381";
+    //std::string counties = "381";
+    n_counties = count_numbers(counties);
+    /*
     counties = "410";
+    counties = "381_364_402_391_362_367_365";
+    counties = "381";//Nelson
+    */
+    //counties = "364";//Amherst
+    //counties = "391";//Amherst
     //empty_38_6611_256_6_4_59_1_6608_158_2_31_8_381
 
     std::string emo_str = fmt::format("empty_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}",
@@ -183,14 +235,22 @@ int main(int argc, char* argv[]) {
     std::string land_filename = "";
     std::string reportloads_filename = "";
     std::string animal_filename = "";
+    std::string manure_filename = "";
+    std::string counties = "";
+    std::string uuid = "";
     po::options_description desc("Allowed options");
+
     desc.add_options()
         ("help,h", "produce help message")
         ("land,l", po::value<std::string>(), "land scenario file")
         ("animal,a", po::value<std::string>(), "animal scenario file")
+        ("manure,m", po::value<std::string>(), "manure scenario file")
+        ("counties,c", po::value<std::string>(), "counties separated by _")
         ("reportloads,r", po::value<std::string>(), "report loads file")
     ;
 
+    std::string emo_uuid = xg::newGuid().str();
+    std::string exec_uuid = xg::newGuid().str();
     po::variables_map vm;
     try {
         po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -220,13 +280,28 @@ int main(int argc, char* argv[]) {
         std::cout << "Animal scenario file was not set.\n";
     }
 
+    if (vm.count("manure")) {
+        std::cout << "Manure scenario file was set to " << vm["manure"].as<std::string>() << ".\n";
+        manure_filename = vm["manure"].as<std::string>();
+    } else {
+        std::cout << "Manure scenario file was not set.\n";
+    }
+
     if (vm.count("reportloads")) {
         std::cout << "Reportloads file was set to " << vm["reportloads"].as<std::string>() << ".\n";
         reportloads_filename = vm["reportloads"].as<std::string>();
     } else {
         std::cout << "Report loads file was not set.\n";
     }
+    if (vm.count("counties")) {
+        std::cout << "Counties to process are:" << vm["counties"].as<std::string>() << ".\n";
+        counties = vm["counties"].as<std::string>();
+    } else {
+        std::cout << "No counties submitted.\n";
+    }
+    fmt::print("{} {} {} {} {}\n", land_filename, animal_filename, manure_filename, reportloads_filename, counties);
 
-    my_test(land_filename, animal_filename, reportloads_filename);
+    my_test(land_filename, animal_filename, manure_filename, reportloads_filename, counties, emo_uuid, exec_uuid);
+
     return 0;
 }
