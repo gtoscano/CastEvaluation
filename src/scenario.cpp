@@ -10,7 +10,7 @@
 
 #include "amqp.h"
 
-#include <spdlog/spdlog.h>
+//#include <spdlog/spdlog.h>
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/sinks/daily_file_sink.h"
 #include "spdlog/sinks/basic_file_sink.h"
@@ -23,7 +23,7 @@
 
 using json = nlohmann::json;
 
-std::shared_ptr<spdlog::logger> Scenario::logger_; // Define the static member variable outside the class definition
+//std::shared_ptr<spdlog::logger> Scenario::logger_; // Define the static member variable outside the class definition
 namespace {
     std::string REDIS_HOST = misc_utilities::get_env_var("REDIS_HOST", "127.0.0.1");
     std::string REDIS_PORT = misc_utilities::get_env_var("REDIS_PORT", "6379");
@@ -43,10 +43,12 @@ Scenario::Scenario() {
     pid_t pid = getpid();
     oss << "logs/scenario_" << pid << ".txt";
     std::string log_file_name = oss.str();
+    /*
     if (!logger_) {
         logger_ = spdlog::daily_logger_mt("scenario_logger", log_file_name, 2, 30);
     }
     logger_->set_level(spdlog::level::warn);
+    */
 
 }
 
