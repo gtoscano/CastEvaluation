@@ -54,6 +54,7 @@ public:
 
 private:
 
+    size_t scenario_id_;
     int load_to_opt_;
     int ef_size_;
     int ef_begin_;

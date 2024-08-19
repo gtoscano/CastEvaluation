@@ -177,7 +177,7 @@ void my_test(const std::string& land_filename, const std::string& animal_filenam
     int scenario_type = 2;
     int soil_p_data_set = 31;
     int source_data_revision = 8;
-    //std::string counties = "381";
+    //  #std::string counties = "332";//Lancaster
     n_counties = count_numbers(counties);
     /*
     counties = "410";
@@ -231,6 +231,10 @@ void my_test(const std::string& land_filename, const std::string& animal_filenam
     base_scenario2.print_loads();
 }
 
+/* Example of calling it:
+ *
+ *
+ * */
 int main(int argc, char* argv[]) {
     std::string land_filename = "";
     std::string reportloads_filename = "";

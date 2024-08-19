@@ -158,8 +158,10 @@ std::vector<double> Scenario::compute_loads(const std::vector<ReportLoadSt>& my_
 }
 
 void Scenario::create_scenario(size_t scenario_id, const std::string& filename, const std::string& output_filename) { 
+
     DataReader data_reader;
     data_reader.read_all();
+    scenario_id_ = scenario_id;
 
     scenario_data_ = data_reader.get_scenario_data(scenario_id);
     scenario_data2_ = data_reader.get_scenario_data2(scenario_id);
@@ -443,6 +445,7 @@ void Scenario::save(std::string filename) {
     std::vector<std::string> valid_lc_bmps_str = {"12"};
     valid_lc_bmps_ = valid_lc_bmps_str;
     json_obj["valid_lc_bmps"] = valid_lc_bmps_str; 
+    json_obj["scenario_id"] = scenario_id_;
 
     std::unordered_map<std::string, int> u_u_group_str;
     for (const auto& [key, val] : u_u_group_){
