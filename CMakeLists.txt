@@ -5,11 +5,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
 
-# Find the spdlog package
-#find_package(spdlog REQUIRED)
 find_package(crossguid CONFIG REQUIRED)
 find_package(Threads REQUIRED)
-#find_package(spdlog REQUIRED)
 #cmake -DCMAKE_BUILD_TYPE=Debug
 
 FetchContent_Declare(
