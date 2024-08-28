@@ -14,7 +14,6 @@
 #include <unordered_map>
 #include <vector>
 
-//#include <spdlog/spdlog.h>
 
 struct Parcel : public ReportLoadSt{
     std::unordered_map<int,double> bmps;
@@ -70,7 +69,6 @@ private:
     std::vector<std::string> ef_keys_;
     std::vector<std::string> lc_keys_;
     std::vector<double> x;
-    //static std::shared_ptr<spdlog::logger> logger_;
     std::string ef_bmp_grp_filename_;
     std::string lc_bmp_grp_filename_;
     bool lc_provided;
